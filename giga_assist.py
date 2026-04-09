@@ -1,9 +1,9 @@
-import os
-import uuid
-import requests
+import os #подключаем работу с .env
+import uuid #добавляем генерацию уникального ID запроса (rq_uid)
+import requests #подключаем библиотеку requests;
 import httpx
-import urllib3
-from dotenv import load_dotenv
+import urllib3 # В коде отключается проверка SSL. Это сделано для упрощения работы. В реальных проектах лучше использовать официальные сертификаты.
+from dotenv import load_dotenv #Загрузка переменных
 from openai import OpenAI
 
 load_dotenv()
@@ -38,6 +38,17 @@ SYSTEM_PROMPT = """
 Пиши живо как совет другу.
 """
 
+"""
+В коде есть отдельный блок, который:
+- Отправляет запрос на сервер авторизации.
+- Передаёт: ключ, уникальный ID запроса (rq_uid).
+- Получает access token.
+В коде есть отдельный блок, который:
+
+Этот блок — ключевой, потому что именно он обновляет токен; без него запросы к модели не работают.
+"""
+
+# Отправка запроса к модели
 def get_access_token() -> str:
     url = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
     headers = {
@@ -61,12 +72,15 @@ def get_access_token() -> str:
 def get_recommendations(user_description: str) -> str:
     access_token = get_access_token()
 
+# Создаётся клиент для работы с GigaChat
     client = OpenAI(
         api_key=access_token,
         base_url="https://gigachat.devices.sberbank.ru/api/v1",
         http_client=httpx.Client(verify=False),  # только для локальной разработки
     )
 
+# Формируется запрос: role: system → правила; role: user → описание человека.
+# Устанавливаются параметры: температура = 0.8 (более креативные ответы)
     completion = client.chat.completions.create(
         model="GigaChat",
         messages=[
